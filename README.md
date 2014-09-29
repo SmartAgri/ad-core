@@ -1,4 +1,4 @@
 ad-core
 =======
 
-Noyau de AgriDesk.org
+Noyau d'AgriDesk.org
