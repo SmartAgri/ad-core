@@ -1,0 +1,153 @@
+apply from: "gradle/setup.gradle"
+
+subprojects {
+  apply plugin: 'eclipse'
+  apply plugin: 'java'
+
+  apply from: "$rootDir/gradle/vertx.gradle"
+
+	repositories {
+		maven {
+			credentials {
+				username 'admin'
+				password 'admin'
+			}
+			url "http://maven.web-education.net:8081/nexus/content/groups/public"
+		}
+	}
+
+  sourceCompatibility = 1.7
+  targetCompatibility = 1.7
+
+  compileJava {
+    sourceCompatibility = project.sourceCompatibility
+    targetCompatibility = project.targetCompatibility
+  }
+
+  compileTestJava {
+    sourceCompatibility = project.sourceCompatibility
+    targetCompatibility = project.targetCompatibility
+  }
+
+  dependencies {
+    //provided "io.vertx:vertx-core:$vertxVersion"
+    //provided "io.vertx:vertx-platform:$vertxVersion"
+
+    //testCompile "junit:junit:$junitVersion"
+    //testCompile "io.vertx:testtools:$toolsVersion"
+  }
+
+  javadoc {
+    options.encoding = 'UTF-8'
+    classpath = configurations.provided
+    classpath += configurations.compile
+  }
+
+	afterEvaluate { project ->
+		project.tasks['copyMod'].doLast {
+			copy {
+				into 'mods'
+				from "${project.name}/build/mods"
+			}
+		}
+		project.tasks['clean'].doLast {
+			rootProject.delete "mods/${project.ext.moduleName}"
+		}
+	}
+}
+
+project(':core') {
+  dependencies {
+    compile "fr.wseduc:web-utils:$webUtilsVersion"
+    compile "fr.wseduc:mongodb-helper:$mongodbHelperVersion"
+	compile "fr.wseduc:mod-neo4j-persistor:$neo4JpersistorVersion"
+  }
+}
+
+project(':traces') {
+  dependencies {
+    compile project(':core')    
+  }
+}
+
+project(':notifications') {
+  dependencies {
+    compile project(':core')
+	compile project(':traces')
+  }
+}
+
+project(':batch') {
+  dependencies {
+    compile project(':core')
+	compile project(':traces')
+	compile project(':notifications')
+  }
+}
+
+project(':security') {
+  dependencies {
+    compile project(':core')
+	compile project(':traces')
+	compile project(':notifications')
+	compile "jp.eisbahn:oauth2-server:1.1.0"
+  }
+}
+project(':proxy') {
+  dependencies {
+    compile project(':core')
+	compile project(':traces')
+	compile project(':notifications')
+	compile project(':security')
+  }
+}
+
+project(':admin') {
+  dependencies {
+    compile project(':core')
+	compile project(':traces')
+	compile project(':notifications')
+	compile project(':security')
+  }
+}
+
+project(':starter') {
+  dependencies {
+    compile project(':core')
+	compile project(':traces')
+	compile project(':notifications')
+	compile project(':security')
+  }
+}
+
+task runEnt(type:Exec, dependsOn: subprojects.copyMod) {
+  workingDir '.'
+
+  //on windows:
+  commandLine 'cmd', '/c', 'run.bat'
+
+  //on linux
+  commandLine './run.sh'
+
+  standardOutput = new ByteArrayOutputStream()
+
+  ext.output = {
+    return standardOutput.toString()
+  }
+}
+
+task stopEnt(type:Exec) {
+  workingDir '.'
+
+  //on windows:
+  commandLine 'cmd', '/c', 'stop.bat'
+
+  //on linux
+  commandLine './stop.sh'
+
+  standardOutput = new ByteArrayOutputStream()
+
+  ext.output = {
+    return standardOutput.toString()
+  }
+}
